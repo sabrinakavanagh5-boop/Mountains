@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,97 +7,96 @@
 <title>MEGA MOUNTAIN CLIMBING</title>
 
 <style>
-  body {
-    margin: 0;
-    overflow: hidden;
-    background: #87ceeb;
-    font-family: Arial, sans-serif;
-  }
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  background: #87ceeb;
+}
 
-  #hud {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    color: white;
-    background: rgba(0,0,0,0.65);
-    padding: 12px;
-    border-radius: 10px;
-    z-index: 5;
-    min-width: 150px;
-  }
+#hud {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 5;
+  color: white;
+  background: rgba(0,0,0,.65);
+  padding: 12px;
+  border-radius: 10px;
+}
 
-  #staminaBar {
-    width: 150px;
-    height: 12px;
-    background: #444;
-    border-radius: 10px;
-    overflow: hidden;
-  }
+#staminaBar {
+  width: 150px;
+  height: 12px;
+  background: #444;
+  border-radius: 10px;
+  overflow: hidden;
+}
 
-  #staminaFill {
-    width: 100%;
-    height: 100%;
-    background: limegreen;
-  }
+#staminaFill {
+  height: 100%;
+  width: 100%;
+  background: limegreen;
+}
 
-  #mobileControls {
-    display: none;
-    position: absolute;
-    bottom: 25px;
-    left: 20px;
-    z-index: 10;
-  }
+#mobileControls {
+  display: none;
+  position: absolute;
+  bottom: 25px;
+  left: 20px;
+  z-index: 10;
+}
 
-  #joystick {
-    width: 125px;
-    height: 125px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.25);
-    border: 2px solid white;
-    position: relative;
-    touch-action: none;
-  }
+#joystick {
+  width: 125px;
+  height: 125px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.25);
+  border: 2px solid white;
+  position: relative;
+  touch-action: none;
+}
 
-  #stick {
-    width: 48px;
-    height: 48px;
-    background: rgba(255,255,255,0.8);
-    border-radius: 50%;
-    position: absolute;
-    left: 36px;
-    top: 36px;
-  }
+#stick {
+  width: 48px;
+  height: 48px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  left: 36px;
+  top: 36px;
+}
 
-  #mobileButtons {
-    position: absolute;
-    right: 20px;
-    bottom: 35px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
+#mobileButtons {
+  position: absolute;
+  right: 20px;
+  bottom: 35px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-  button {
-    padding: 14px;
-    border: none;
-    border-radius: 12px;
-    background: rgba(20,20,20,0.8);
-    color: white;
-    font-size: 15px;
-  }
+button {
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(20,20,20,.8);
+  color: white;
+  font-size: 15px;
+}
 
-  #instructions {
-    position: absolute;
-    bottom: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: white;
-    background: rgba(0,0,0,0.6);
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    text-align: center;
-  }
+#instructions {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  background: rgba(0,0,0,.6);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  text-align: center;
+}
 </style>
 </head>
 
@@ -104,6 +104,7 @@
 
 <div id="hud">
   <strong>MEGA MOUNTAIN CLIMBING</strong>
+  <p id="vrStatus">Checking VR support...</p>
   <p>Stamina</p>
   <div id="staminaBar">
     <div id="staminaFill"></div>
@@ -123,8 +124,8 @@
 </div>
 
 <div id="instructions">
-  PC: WASD to move · Mouse to look · Space to jump<br>
-  VR: Left stick to move · Right stick to turn · Grip to climb
+  PC: WASD · Mouse to look · Space to jump<br>
+  VR: Left stick moves · Right stick turns · Grip to climb
 </div>
 
 <script type="module">
@@ -134,17 +135,16 @@ import * as THREE from
 import { VRButton } from
 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/VRButton.js';
 
-/* ---------------- SCENE ---------------- */
+/* =========================
+   SCENE
+========================= */
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 scene.fog = new THREE.Fog(0x87ceeb, 30, 180);
 
 const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  500
+  75, window.innerWidth / window.innerHeight, 0.1, 500
 );
 
 const playerRig = new THREE.Group();
@@ -153,10 +153,7 @@ scene.add(playerRig);
 camera.position.set(0, 1.7, 8);
 playerRig.add(camera);
 
-const renderer = new THREE.WebGLRenderer({
-  antialias: true
-});
-
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.xr.enabled = true;
@@ -164,7 +161,9 @@ renderer.xr.enabled = true;
 document.body.appendChild(renderer.domElement);
 document.body.appendChild(VRButton.createButton(renderer));
 
-/* ---------------- LIGHTING ---------------- */
+/* =========================
+   LIGHTING
+========================= */
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x526044, 2));
 
@@ -172,7 +171,9 @@ const sunlight = new THREE.DirectionalLight(0xffffff, 2);
 sunlight.position.set(30, 60, 20);
 scene.add(sunlight);
 
-/* ---------------- MOUNTAIN ---------------- */
+/* =========================
+   MOUNTAIN TERRAIN
+========================= */
 
 const groundGeometry = new THREE.PlaneGeometry(250, 250, 80, 80);
 groundGeometry.rotateX(-Math.PI / 2);
@@ -187,11 +188,14 @@ for (let i = 0; i < positions.count; i++) {
     Math.sin(x * 0.06) * 2 +
     Math.cos(z * 0.05) * 2;
 
-  const mountain = Math.max(0, 1 - Math.sqrt(
-    (x * x) / 1800 + ((z + 35) * (z + 35)) / 2200
-  ));
+  const mountainHeight = Math.max(
+    0,
+    1 - Math.sqrt(
+      (x*x)/1800 + ((z+35)*(z+35))/2200
+    )
+  );
 
-  height += mountain * 35;
+  height += mountainHeight * 35;
   height += Math.random() * 0.7;
 
   positions.setY(i, height);
@@ -199,7 +203,7 @@ for (let i = 0; i < positions.count; i++) {
 
 groundGeometry.computeVertexNormals();
 
-const mountain = new THREE.Mesh(
+const terrain = new THREE.Mesh(
   groundGeometry,
   new THREE.MeshStandardMaterial({
     color: 0x687b58,
@@ -207,32 +211,26 @@ const mountain = new THREE.Mesh(
   })
 );
 
-scene.add(mountain);
-
-/* Snowy mountain peak */
+scene.add(terrain);
 
 const peak = new THREE.Mesh(
   new THREE.ConeGeometry(13, 25, 7),
-  new THREE.MeshStandardMaterial({
-    color: 0xeaf4f7,
-    roughness: 0.9
-  })
+  new THREE.MeshStandardMaterial({ color: 0xeaf4f7 })
 );
 
 peak.position.set(0, 37, -35);
 scene.add(peak);
 
-/* ---------------- PICKAXES ---------------- */
+/* =========================
+   PICKAXE MODEL
+========================= */
 
 function createPickaxe() {
   const pickaxe = new THREE.Group();
 
   const handle = new THREE.Mesh(
     new THREE.CylinderGeometry(0.035, 0.045, 0.55, 8),
-    new THREE.MeshStandardMaterial({
-      color: 0x79502b,
-      roughness: 0.8
-    })
+    new THREE.MeshStandardMaterial({ color: 0x79502b })
   );
 
   pickaxe.add(handle);
@@ -264,194 +262,257 @@ function createPickaxe() {
   return pickaxe;
 }
 
-/* ---------------- VR CONTROLLERS ---------------- */
+/* =========================
+   AUTOMATIC VR DETECTION
+========================= */
 
-// Controller objects receive button events.
-const leftController = renderer.xr.getController(0);
-const rightController = renderer.xr.getController(1);
+let vrActive = false;
 
-playerRig.add(leftController);
-playerRig.add(rightController);
+const vrControllers = [];
+const vrGrips = [];
 
-// Grip spaces represent the physical controller grips.
-// Attach each pickaxe to its corresponding grip.
-const leftGrip = renderer.xr.getControllerGrip(0);
-const rightGrip = renderer.xr.getControllerGrip(1);
+const controllerHands = {
+  left: null,
+  right: null
+};
 
-playerRig.add(leftGrip);
-playerRig.add(rightGrip);
+const controllerStates = {
+  left: { squeezing: false },
+  right: { squeezing: false }
+};
 
-const leftPickaxe = createPickaxe();
-const rightPickaxe = createPickaxe();
+function setupVRControllers() {
+  for (let i = 0; i < 2; i++) {
+    const controller = renderer.xr.getController(i);
+    const grip = renderer.xr.getControllerGrip(i);
 
-leftGrip.add(leftPickaxe);
-rightGrip.add(rightPickaxe);
+    scene.add(controller);
+    scene.add(grip);
 
-// Adjust these offsets if the pickaxes appear at the wrong angle
-// on your particular VR controller.
-leftPickaxe.position.set(0, -0.08, -0.13);
-leftPickaxe.rotation.set(Math.PI / 2, 0, 0);
+    vrControllers.push(controller);
+    vrGrips.push(grip);
 
-rightPickaxe.position.set(0, -0.08, -0.13);
-rightPickaxe.rotation.set(Math.PI / 2, 0, 0);
+    const pickaxe = createPickaxe();
 
-/* ---------------- VR INPUT ---------------- */
+    // The pickaxe is attached to the physical controller grip.
+    pickaxe.position.set(0, -0.08, -0.13);
+    pickaxe.rotation.set(Math.PI / 2, 0, 0);
 
-let leftStickX = 0;
-let leftStickY = 0;
-let rightStickX = 0;
+    grip.add(pickaxe);
 
-let leftGrabbing = false;
-let rightGrabbing = false;
+    controller.userData.pickaxe = pickaxe;
 
-leftController.addEventListener('squeezestart', () => {
-  leftGrabbing = true;
-});
+    controller.addEventListener('squeezestart', event => {
+      const hand = event.data?.handedness;
+      if (hand === 'left') controllerStates.left.squeezing = true;
+      if (hand === 'right') controllerStates.right.squeezing = true;
+    });
 
-leftController.addEventListener('squeezeend', () => {
-  leftGrabbing = false;
-});
-
-rightController.addEventListener('squeezestart', () => {
-  rightGrabbing = true;
-});
-
-rightController.addEventListener('squeezeend', () => {
-  rightGrabbing = false;
-});
-
-function applyDeadzone(value) {
-  return Math.abs(value) < 0.15 ? 0 : value;
+    controller.addEventListener('squeezeend', event => {
+      const hand = event.data?.handedness;
+      if (hand === 'left') controllerStates.left.squeezing = false;
+      if (hand === 'right') controllerStates.right.squeezing = false;
+    });
+  }
 }
 
-function readControllerSticks() {
-  leftStickX = 0;
-  leftStickY = 0;
-  rightStickX = 0;
+setupVRControllers();
 
+/* =========================
+   VR SESSION DETECTION
+========================= */
+
+const vrStatus = document.getElementById('vrStatus');
+
+renderer.xr.addEventListener('sessionstart', () => {
+  vrActive = true;
+  vrStatus.textContent = 'VR headset connected';
+  console.log('VR session started');
+});
+
+renderer.xr.addEventListener('sessionend', () => {
+  vrActive = false;
+
+  controllerStates.left.squeezing = false;
+  controllerStates.right.squeezing = false;
+
+  vrStatus.textContent = 'VR disconnected';
+  console.log('VR session ended');
+});
+
+if (navigator.xr) {
+  navigator.xr.isSessionSupported('immersive-vr')
+    .then(supported => {
+      vrStatus.textContent = supported
+        ? 'VR headset support available'
+        : 'VR not available - PC/mobile mode';
+    })
+    .catch(() => {
+      vrStatus.textContent = 'VR support unavailable';
+    });
+} else {
+  vrStatus.textContent = 'WebXR not supported by this browser';
+}
+
+/* =========================
+   DETECT LEFT AND RIGHT HANDS
+========================= */
+
+function detectVRHands() {
   const session = renderer.xr.getSession();
+
+  controllerHands.left = null;
+  controllerHands.right = null;
+
   if (!session) return;
 
   for (const source of session.inputSources) {
-    if (!source.gamepad) continue;
-
-    const axes = source.gamepad.axes;
-
-    // Most VR controllers use axes 2 and 3 for thumbsticks.
-    // Some controllers use axes 0 and 1 instead.
-    let x = axes.length >= 4 ? axes[2] : axes[0];
-    let y = axes.length >= 4 ? axes[3] : axes[1];
-
-    x = applyDeadzone(x || 0);
-    y = applyDeadzone(y || 0);
-
     if (source.handedness === 'left') {
-      leftStickX = x;
-      leftStickY = y;
+      controllerHands.left = source;
     }
 
     if (source.handedness === 'right') {
-      rightStickX = x;
+      controllerHands.right = source;
     }
   }
 }
 
-/* ---------------- VR MOVEMENT ---------------- */
+/* =========================
+   VR JOYSTICK DETECTION
+========================= */
 
-const movementSpeed = 4;
-const turnSpeed = 2.2;
+let vrMoveX = 0;
+let vrMoveY = 0;
+let vrTurnX = 0;
 
-function updateVRMovement(delta) {
-  readControllerSticks();
+function deadzone(value) {
+  return Math.abs(value) < 0.15 ? 0 : value;
+}
 
-  // Get the direction the headset is facing.
+function readStick(source) {
+  if (!source || !source.gamepad) return [0, 0];
+
+  const axes = source.gamepad.axes;
+
+  // Controller layouts differ. This supports common WebXR layouts.
+  let x = axes.length >= 4 ? axes[2] : axes[0];
+  let y = axes.length >= 4 ? axes[3] : axes[1];
+
+  return [
+    deadzone(x || 0),
+    deadzone(y || 0)
+  ];
+}
+
+function readVRJoysticks() {
+  vrMoveX = 0;
+  vrMoveY = 0;
+  vrTurnX = 0;
+
+  if (!vrActive) return;
+
+  detectVRHands();
+
+  const leftStick = readStick(controllerHands.left);
+  const rightStick = readStick(controllerHands.right);
+
+  vrMoveX = leftStick[0];
+  vrMoveY = leftStick[1];
+  vrTurnX = rightStick[0];
+}
+
+/* =========================
+   VR PLAYER MOVEMENT
+========================= */
+
+function updateVRPlayer(delta) {
+  if (!vrActive) return;
+
+  readVRJoysticks();
+
   const xrCamera = renderer.xr.getCamera(camera);
-  const direction = new THREE.Vector3();
 
-  xrCamera.getWorldDirection(direction);
+  const forward = new THREE.Vector3();
+  xrCamera.getWorldDirection(forward);
 
-  // Flatten direction so the player moves along the ground.
-  direction.y = 0;
-  direction.normalize();
+  forward.y = 0;
+  forward.normalize();
 
   const right = new THREE.Vector3()
-    .crossVectors(direction, new THREE.Vector3(0, 1, 0))
+    .crossVectors(forward, new THREE.Vector3(0, 1, 0))
     .normalize();
 
-  // Left thumbstick moves the entire player rig.
   const movement = new THREE.Vector3();
 
-  movement.addScaledVector(direction, -leftStickY);
-  movement.addScaledVector(right, leftStickX);
+  movement.addScaledVector(forward, -vrMoveY);
+  movement.addScaledVector(right, vrMoveX);
 
   if (movement.lengthSq() > 1) {
     movement.normalize();
   }
 
-  playerRig.position.addScaledVector(
-    movement,
-    movementSpeed * delta
-  );
+  // Left thumbstick movement.
+  playerRig.position.addScaledVector(movement, 4 * delta);
 
-  // Right thumbstick turns the player.
-  playerRig.rotation.y -= rightStickX * turnSpeed * delta;
+  // Right thumbstick turning.
+  playerRig.rotation.y -= vrTurnX * 2.2 * delta;
 }
 
-/* ---------------- CONTROLLER CLIMBING ---------------- */
+/* =========================
+   GRIP-BASED CLIMBING
+========================= */
 
-// When the player holds a controller grip, the controller movement
-// moves the player in the opposite direction.
-// This provides a basic grip-based climbing interaction.
+const previousPositions = {
+  left: new THREE.Vector3(),
+  right: new THREE.Vector3()
+};
 
-const previousLeftPosition = new THREE.Vector3();
-const previousRightPosition = new THREE.Vector3();
+const currentPositions = {
+  left: new THREE.Vector3(),
+  right: new THREE.Vector3()
+};
 
-const currentLeftPosition = new THREE.Vector3();
-const currentRightPosition = new THREE.Vector3();
-
-let leftPositionInitialized = false;
-let rightPositionInitialized = false;
+const positionInitialized = {
+  left: false,
+  right: false
+};
 
 function updateGripClimbing() {
-  if (!renderer.xr.isPresenting) return;
+  if (!vrActive) return;
 
-  leftController.getWorldPosition(currentLeftPosition);
-  rightController.getWorldPosition(currentRightPosition);
+  const hands = [
+    { name: 'left', controller: vrControllers[0] },
+    { name: 'right', controller: vrControllers[1] }
+  ];
 
-  if (leftGrabbing) {
-    if (leftPositionInitialized) {
+  for (const hand of hands) {
+    const name = hand.name;
+
+    // Skip until the hand has been identified.
+    if (!controllerStates[name].squeezing) {
+      positionInitialized[name] = false;
+      continue;
+    }
+
+    hand.controller.getWorldPosition(currentPositions[name]);
+
+    if (positionInitialized[name]) {
       const movement = new THREE.Vector3().subVectors(
-        currentLeftPosition,
-        previousLeftPosition
+        currentPositions[name],
+        previousPositions[name]
       );
 
       playerRig.position.sub(movement);
     }
 
-    previousLeftPosition.copy(currentLeftPosition);
-    leftPositionInitialized = true;
-  } else {
-    leftPositionInitialized = false;
-  }
-
-  if (rightGrabbing) {
-    if (rightPositionInitialized) {
-      const movement = new THREE.Vector3().subVectors(
-        currentRightPosition,
-        previousRightPosition
-      );
-
-      playerRig.position.sub(movement);
-    }
-
-    previousRightPosition.copy(currentRightPosition);
-    rightPositionInitialized = true;
-  } else {
-    rightPositionInitialized = false;
+    previousPositions[name].copy(currentPositions[name]);
+    positionInitialized[name] = true;
   }
 }
 
-/* ---------------- PC CONTROLS ---------------- */
+/* =========================
+   PC CONTROLS
+========================= */
 
 const keys = {};
 
@@ -472,7 +533,8 @@ renderer.domElement.addEventListener('click', () => {
 });
 
 document.addEventListener('pointerlockchange', () => {
-  mouseLocked = document.pointerLockElement === renderer.domElement;
+  mouseLocked =
+    document.pointerLockElement === renderer.domElement;
 });
 
 document.addEventListener('mousemove', event => {
@@ -481,10 +543,9 @@ document.addEventListener('mousemove', event => {
   playerRig.rotation.y -= event.movementX * 0.002;
 
   camera.rotation.x -= event.movementY * 0.002;
+
   camera.rotation.x = THREE.MathUtils.clamp(
-    camera.rotation.x,
-    -1.4,
-    1.4
+    camera.rotation.x, -1.4, 1.4
   );
 });
 
@@ -497,17 +558,17 @@ function updatePCMovement(delta) {
   const right = new THREE.Vector3(1, 0, 0)
     .applyQuaternion(playerRig.quaternion);
 
-  if (keys['KeyW']) playerRig.position.addScaledVector(forward, 5 * delta);
-  if (keys['KeyS']) playerRig.position.addScaledVector(forward, -5 * delta);
-  if (keys['KeyA']) playerRig.position.addScaledVector(right, -5 * delta);
-  if (keys['KeyD']) playerRig.position.addScaledVector(right, 5 * delta);
+  if (keys.KeyW) playerRig.position.addScaledVector(forward, 5 * delta);
+  if (keys.KeyS) playerRig.position.addScaledVector(forward, -5 * delta);
+  if (keys.KeyA) playerRig.position.addScaledVector(right, -5 * delta);
+  if (keys.KeyD) playerRig.position.addScaledVector(right, 5 * delta);
 
-  if (keys['Space']) {
-    playerRig.position.y += 3 * delta;
-  }
+  if (keys.Space) playerRig.position.y += 3 * delta;
 }
 
-/* ---------------- MOBILE JOYSTICK ---------------- */
+/* =========================
+   MOBILE CONTROLS
+========================= */
 
 const mobileControls = document.getElementById('mobileControls');
 const joystick = document.getElementById('joystick');
@@ -519,7 +580,6 @@ if ('ontouchstart' in window) {
 
 let mobileX = 0;
 let mobileY = 0;
-
 let joystickActive = false;
 
 joystick.addEventListener('pointerdown', event => {
@@ -580,7 +640,9 @@ function updateMobileMovement(delta) {
   playerRig.position.addScaledVector(right, mobileX * 4 * delta);
 }
 
-/* ---------------- JUMP AND CLIMB BUTTONS ---------------- */
+/* =========================
+   JUMP AND CLIMB BUTTONS
+========================= */
 
 let jumpRequested = false;
 let climbRequested = false;
@@ -589,24 +651,31 @@ document.getElementById('jumpButton').addEventListener('click', () => {
   jumpRequested = true;
 });
 
-document.getElementById('climbButton').addEventListener('pointerdown', () => {
+const climbButton = document.getElementById('climbButton');
+
+climbButton.addEventListener('pointerdown', () => {
   climbRequested = true;
 });
 
-document.getElementById('climbButton').addEventListener('pointerup', () => {
+climbButton.addEventListener('pointerup', () => {
   climbRequested = false;
 });
 
-document.getElementById('climbButton').addEventListener('pointercancel', () => {
+climbButton.addEventListener('pointercancel', () => {
   climbRequested = false;
 });
 
-/* ---------------- STAMINA ---------------- */
+/* =========================
+   STAMINA
+========================= */
 
 let stamina = 100;
 
 function updateStamina(delta) {
-  const climbing = leftGrabbing || rightGrabbing || climbRequested;
+  const climbing =
+    controllerStates.left.squeezing ||
+    controllerStates.right.squeezing ||
+    climbRequested;
 
   if (climbing) {
     stamina -= 10 * delta;
@@ -623,7 +692,9 @@ function updateStamina(delta) {
     stamina <= 0 ? 'Rest and recover!' : 'Ready to climb!';
 }
 
-/* ---------------- GAME LOOP ---------------- */
+/* =========================
+   MAIN GAME LOOP
+========================= */
 
 const clock = new THREE.Clock();
 
@@ -631,7 +702,7 @@ function animate() {
   const delta = Math.min(clock.getDelta(), 0.05);
 
   if (renderer.xr.isPresenting) {
-    updateVRMovement(delta);
+    updateVRPlayer(delta);
     updateGripClimbing();
   } else {
     updatePCMovement(delta);
@@ -650,15 +721,17 @@ function animate() {
 
 renderer.setAnimationLoop(animate);
 
-/* ---------------- RESIZE ---------------- */
+/* =========================
+   RESIZE
+========================= */
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 </script>
 </body>
 </html>
+```

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mega Mountain Climbing</title>
+
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #87ceeb;
+}
+
+#hud {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    color: white;
+    background: #0009;
+    padding: 15px;
+    border-radius: 12px;
+    z-index: 5;
+}
+
+#stamina {
+    width: 160px;
+    height: 12px;
+    background: #555;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#bar {
+    width: 100%;
+    height: 100%;
+    background: limegreen;
+}
+
+#instructions {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    background: #0009;
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 5;
+}
+
+#start {
+    position: absolute;
+    inset: 0;
+    background: #000b;
+    display: grid;
+    place-items: center;
+    color: white;
+    text-align: center;
+    z-index: 10;
+}
+
+#start button {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 10px;
+    background: limegreen;
+    font-size: 20px;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<div id="hud">
+    <h3>🏔️ MEGA MOUNTAIN CLIMBING</h3>
+    <p id="altitude">Altitude: 0m</p>
+    <p>Stamina</p>
+    <div id="stamina"><div id="bar"></div></div>
+</div>
+
+<div id="instructions">
+    WASD = Move | Mouse = Look<br>
+    SPACE = Jump | E = Climb | R = Reset
+</div>
+
+<div id="start">
+    <div>
+        <h1>🏔️ MEGA MOUNTAIN CLIMBING</h1>
+        <p>Explore the mountains. Climb to the summit!</p>
+        <button id="play">START CLIMBING</button>
+    </div>
+</div>
+
+<script type="module">
+import * as THREE from
+'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+import { VRButton } from
+'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/VRButton.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.Fog(0x87ceeb, 40, 180);
+
+const camera = new THREE.PerspectiveCamera(
+    75, window.innerWidth/window.innerHeight, 0.1, 500
+);
+
+camera.position.set(0, 2, 25);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.xr.enabled = true;
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x59634d, 2));
+
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.position.set(-30, 50, 30);
+sun.castShadow = true;
+scene.add(sun);
+
+// MATERIALS
+function material(color) {
+    return new THREE.MeshStandardMaterial({color});
+}
+
+// GROUND
+const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(400,400),
+    material(0x526d48)
+);
+ground.rotation.x = -Math.PI/2;
+ground.position.y = -0.2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// MOUNTAINS
+function createMountain(x,z,height,radius,color) {
+    const mountain = new THREE.Mesh(
+        new THREE.ConeGeometry(radius,height,8,5),
+        material(color)
+    );
+
+    mountain.position.set(x,height/2,z);
+    mountain.castShadow = true;
+    mountain.receiveShadow = true;
+    scene.add(mountain);
+
+    // Snow cap
+    const snow = new THREE.Mesh(
+        new THREE.ConeGeometry(radius*0.4,height*0.25,8),
+        material(0xffffff)
+    );
+
+    snow.position.set(x,height*0.87,z);
+    scene.add(snow);
+}
+
+createMountain(0,-30,55,24,0x697b80);
+createMountain(-40,-45,43,20,0x71817d);
+createMountain(40,-55,50,23,0x64777b);
+createMountain(5,-85,75,28,0x65767b);
+
+// ROCKS
+const rocks = [];
+
+for(let i=0;i<40;i++) {
+    const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(1+Math.random()*1.5),
+        material(0x777b78)
+    );
+
+    rock.position.set(
+        (Math.random()-0.5)*45,
+        Math.random()*8,
+        -Math.random()*65
+    );
+
+    rock.castShadow = true;
+    scene.add(rock);
+    rocks.push(rock);
+}
+
+// TREES
+for(let i=0;i<65;i++) {
+    const x = (Math.random()-0.5)*100;
+    const z = Math.random()*-80;
+
+    const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2,0.3,2),
+        material(0x60452e)
+    );
+
+    trunk.position.set(x,1,z);
+    scene.add(trunk);
+
+    const leaves = new THREE.Mesh(
+        new THREE.ConeGeometry(1.5,4,7),
+        material(0x244c3c)
+    );
+
+    leaves.position.set(x,3.5,z);
+    scene.add(leaves);
+}
+
+// LAKE
+const lake = new THREE.Mesh(
+    new THREE.CircleGeometry(8,40),
+    new THREE.MeshStandardMaterial({
+        color:0x329bc1,
+        roughness:0.2
+    })
+);
+
+lake.rotation.x = -Math.PI/2;
+lake.position.set(-22,0,-17);
+scene.add(lake);
+
+// CAMP
+const tent = new THREE.Mesh(
+    new THREE.ConeGeometry(2,3,4),
+    material(0xc66f42)
+);
+
+tent.position.set(14,1.5,10);
+scene.add(tent);
+
+// PLAYER
+let stamina = 100;
+let yaw = 0;
+let pitch = 0;
+let velocityY = 0;
+let onGround = true;
+let started = false;
+
+const keys = {};
+
+document.addEventListener('keydown',e=>{
+    keys[e.code] = true;
+
+    if(e.code === 'KeyR') {
+        camera.position.set(0,2,25);
+        velocityY = 0;
+    }
+});
+
+document.addEventListener('keyup',e=>{
+    keys[e.code] = false;
+});
+
+// MOUSE LOOK
+document.addEventListener('mousemove',e=>{
+    if(document.pointerLockElement === renderer.domElement) {
+        yaw -= e.movementX * 0.002;
+        pitch -= e.movementY * 0.002;
+
+        pitch = Math.max(-1.4,Math.min(1.4,pitch));
+    }
+});
+
+document.getElementById('play').onclick = ()=>{
+    started = true;
+    document.getElementById('start').style.display = 'none';
+    renderer.domElement.requestPointerLock?.();
+};
+
+// VR BUTTON
+document.body.appendChild(VRButton.createButton(renderer));
+
+// CLIMBING
+const raycaster = new THREE.Raycaster();
+const clock = new THREE.Clock();
+
+function animate() {
+    const delta = Math.min(clock.getDelta(),0.04);
+
+    if(started) {
+
+        const forward = new THREE.Vector3(
+            -Math.sin(yaw),0,-Math.cos(yaw)
+        );
+
+        const right = new THREE.Vector3(
+            Math.cos(yaw),0,-Math.sin(yaw)
+        );
+
+        let direction = new THREE.Vector3();
+
+        if(keys.KeyW) direction.add(forward);
+        if(keys.KeyS) direction.sub(forward);
+        if(keys.KeyD) direction.add(right);
+        if(keys.KeyA) direction.sub(right);
+
+        if(direction.lengthSq()>0) direction.normalize();
+
+        // CLIMB
+        raycaster.set(camera.position,forward);
+
+        const hits = raycaster.intersectObjects(rocks);
+
+        const climbing =
+            keys.KeyE &&
+            hits.length > 0 &&
+            hits[0].distance < 3.5 &&
+            stamina > 0;
+
+        if(climbing) {
+            camera.position.addScaledVector(direction,3*delta);
+            camera.position.y += 2.5*delta;
+            stamina = Math.max(0,stamina-12*delta);
+        } else {
+            camera.position.addScaledVector(direction,6*delta);
+
+            if(keys.Space && onGround) {
+                velocityY = 7;
+                onGround = false;
+            }
+
+            velocityY -= 18*delta;
+            camera.position.y += velocityY*delta;
+
+            if(camera.position.y < 1.7) {
+                camera.position.y = 1.7;
+                velocityY = 0;
+                onGround = true;
+            }
+
+            stamina = Math.min(100,stamina+8*delta);
+        }
+
+        camera.rotation.order = 'YXZ';
+        camera.rotation.y = yaw;
+        camera.rotation.x = pitch;
+
+        camera.position.x = THREE.MathUtils.clamp(
+            camera.position.x,-65,65
+        );
+
+        camera.position.z = THREE.MathUtils.clamp(
+            camera.position.z,-100,45
+        );
+
+        document.getElementById('bar').style.width =
+            stamina + '%';
+
+        document.getElementById('altitude').textContent =
+            'Altitude: ' +
+            Math.max(0,Math.round(
+                (camera.position.y-1.7)*10 +
+                (-camera.position.z)*1.8
+            )) + 'm';
+    }
+
+    renderer.render(scene,camera);
+}
+
+renderer.setAnimationLoop(animate);
+
+// RESIZE
+window.addEventListener('resize',()=>{
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+});
+
+</script>
+</body>
+</html>

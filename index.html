@@ -79,4 +79,902 @@ body {
 
 button {
   padding: 14px;
- 
+  border: none;
+  border-radius: 12px;
+  background: rgba(20,20,20,.8);
+  color: white;
+  font-size: 15px;
+}
+
+#instructions {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  background: rgba(0,0,0,.6);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  text-align: center;
+}
+
+#errorMessage {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
+  color: white;
+  background: #8b0000;
+  padding: 20px;
+  max-width: 85%;
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+</style>
+
+<!-- FIX: Tell the browser where to find Three.js modules -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+
+<body>
+
+<div id="hud">
+  <strong>MEGA MOUNTAIN CLIMBING</strong>
+  <p id="vrStatus">Checking VR support...</p>
+  <p>Stamina</p>
+  <div id="staminaBar">
+    <div id="staminaFill"></div>
+  </div>
+  <p id="status">Ready to climb!</p>
+  <p id="altitude">Altitude: 0 m</p>
+</div>
+
+<div id="mobileControls">
+  <div id="joystick">
+    <div id="stick"></div>
+  </div>
+</div>
+
+<div id="mobileButtons">
+  <button id="jumpButton">JUMP</button>
+  <button id="climbButton">CLIMB</button>
+</div>
+
+<div id="instructions">
+  PC: WASD · Mouse to look · E to climb · Space to jump<br>
+  VR: Left stick moves · Right stick turns · Grip to climb
+</div>
+
+<div id="errorMessage"></div>
+
+<script type="module">
+
+import * as THREE from 'three';
+import { VRButton } from 'three/addons/webxr/VRButton.js';
+
+/* =================================
+   ERROR DISPLAY
+================================= */
+
+window.addEventListener('error', event => {
+  const box = document.getElementById('errorMessage');
+  box.style.display = 'block';
+  box.textContent = 'Game error: ' + event.message;
+});
+
+window.addEventListener('unhandledrejection', event => {
+  const box = document.getElementById('errorMessage');
+  box.style.display = 'block';
+  box.textContent = 'Loading error: ' + event.reason;
+});
+
+/* =================================
+   SCENE AND PLAYER
+================================= */
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.Fog(0x87ceeb, 50, 220);
+
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  600
+);
+
+const playerRig = new THREE.Group();
+scene.add(playerRig);
+
+// Spawn outside the mountain on flat ground.
+playerRig.position.set(0, 0, 65);
+
+camera.position.set(0, 1.7, 0);
+playerRig.add(camera);
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: true
+});
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.xr.enabled = true;
+
+document.body.appendChild(renderer.domElement);
+document.body.appendChild(VRButton.createButton(renderer));
+
+/* =================================
+   LIGHTING
+================================= */
+
+scene.add(
+  new THREE.HemisphereLight(0xffffff, 0x526044, 2)
+);
+
+const sunlight = new THREE.DirectionalLight(0xffffff, 2);
+sunlight.position.set(30, 70, 20);
+scene.add(sunlight);
+
+/* =================================
+   MOUNTAIN HEIGHT FUNCTION
+================================= */
+
+function getMountainHeight(x, z) {
+
+  const distance = Math.sqrt(
+    x * x + (z + 25) * (z + 25)
+  );
+
+  // Flat ground outside the mountain.
+  if (distance >= 42) return 0;
+
+  // Flat summit plateau.
+  if (distance <= 9) return 35;
+
+  const t = (42 - distance) / (42 - 9);
+
+  let height = 35 * t * t * (3 - 2 * t);
+
+  // Same surface variation used by the visible terrain.
+  if (distance > 11 && distance < 40) {
+    height += Math.sin(x * 0.25) * 0.7;
+    height += Math.cos(z * 0.2) * 0.7;
+  }
+
+  return height;
+}
+
+/* =================================
+   MOUNTAIN TERRAIN
+================================= */
+
+const groundGeometry = new THREE.PlaneGeometry(
+  250, 250, 150, 150
+);
+
+groundGeometry.rotateX(-Math.PI / 2);
+
+const positions = groundGeometry.attributes.position;
+const colors = [];
+
+for (let i = 0; i < positions.count; i++) {
+
+  const x = positions.getX(i);
+  const z = positions.getZ(i);
+
+  const height = getMountainHeight(x, z);
+
+  positions.setY(i, height);
+
+  if (height > 28) {
+    colors.push(0.91, 0.95, 0.98);
+  } else if (height > 12) {
+    colors.push(0.48, 0.49, 0.43);
+  } else {
+    colors.push(0.28, 0.42, 0.24);
+  }
+}
+
+groundGeometry.setAttribute(
+  'color',
+  new THREE.Float32BufferAttribute(colors, 3)
+);
+
+groundGeometry.computeVertexNormals();
+
+const terrain = new THREE.Mesh(
+  groundGeometry,
+  new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 1
+  })
+);
+
+scene.add(terrain);
+
+/* =================================
+   FLAT SUMMIT PLATFORM
+================================= */
+
+const summitPlatform = new THREE.Mesh(
+  new THREE.CircleGeometry(8.8, 48),
+  new THREE.MeshStandardMaterial({
+    color: 0xeaf2f5,
+    roughness: 1
+  })
+);
+
+summitPlatform.rotation.x = -Math.PI / 2;
+summitPlatform.position.set(0, 35.04, -25);
+scene.add(summitPlatform);
+
+/* =================================
+   CONTROLS STATE
+================================= */
+
+const keys = {};
+
+let climbRequested = false;
+let jumpRequested = false;
+let vrActive = false;
+
+const controllerStates = {
+  left: { squeezing: false },
+  right: { squeezing: false }
+};
+
+/* =================================
+   TERRAIN COLLISION
+================================= */
+
+const previousPlayerPosition = new THREE.Vector3();
+
+const PLAYER_MAX_STEP_SLOPE = 0.85;
+
+function updatePlayerCollision(previousPosition) {
+
+  const x = playerRig.position.x;
+  const z = playerRig.position.z;
+
+  const currentGround = getMountainHeight(x, z);
+
+  const previousGround = getMountainHeight(
+    previousPosition.x,
+    previousPosition.z
+  );
+
+  const horizontalDistance = Math.sqrt(
+    Math.pow(x - previousPosition.x, 2) +
+    Math.pow(z - previousPosition.z, 2)
+  );
+
+  const heightDifference = currentGround - previousGround;
+
+  const climbing =
+    keys['KeyE'] ||
+    climbRequested ||
+    controllerStates.left.squeezing ||
+    controllerStates.right.squeezing;
+
+  // Stop ordinary walking through steep slopes.
+  if (
+    !climbing &&
+    heightDifference >
+      horizontalDistance * PLAYER_MAX_STEP_SLOPE + 0.12
+  ) {
+    playerRig.position.x = previousPosition.x;
+    playerRig.position.z = previousPosition.z;
+  }
+
+  const groundHeight = getMountainHeight(
+    playerRig.position.x,
+    playerRig.position.z
+  );
+
+  if (playerRig.position.y < groundHeight) {
+    playerRig.position.y = groundHeight;
+  }
+
+  if (playerRig.position.y < 0) {
+    playerRig.position.y = 0;
+  }
+}
+
+/* =================================
+   PICKAXE MODEL
+================================= */
+
+function createPickaxe() {
+
+  const pickaxe = new THREE.Group();
+
+  const handle = new THREE.Mesh(
+    new THREE.CylinderGeometry(
+      0.035, 0.045, 0.55, 8
+    ),
+    new THREE.MeshStandardMaterial({
+      color: 0x79502b
+    })
+  );
+
+  pickaxe.add(handle);
+
+  const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.38, 0.055, 0.07),
+    new THREE.MeshStandardMaterial({
+      color: 0xb9c5cc,
+      metalness: 0.8,
+      roughness: 0.25
+    })
+  );
+
+  head.position.y = 0.27;
+  pickaxe.add(head);
+
+  const point = new THREE.Mesh(
+    new THREE.ConeGeometry(0.055, 0.2, 8),
+    new THREE.MeshStandardMaterial({
+      color: 0xb9c5cc,
+      metalness: 0.8
+    })
+  );
+
+  point.rotation.z = Math.PI / 2;
+  point.position.set(-0.24, 0.27, 0);
+
+  pickaxe.add(point);
+
+  return pickaxe;
+}
+
+/* =================================
+   VR CONTROLLERS
+================================= */
+
+const vrControllers = [];
+const vrGrips = [];
+
+function setupVRControllers() {
+
+  for (let i = 0; i < 2; i++) {
+
+    const controller = renderer.xr.getController(i);
+    const grip = renderer.xr.getControllerGrip(i);
+
+    scene.add(controller);
+    scene.add(grip);
+
+    vrControllers.push(controller);
+    vrGrips.push(grip);
+
+    const pickaxe = createPickaxe();
+
+    pickaxe.position.set(0, -0.08, -0.13);
+    pickaxe.rotation.set(Math.PI / 2, 0, 0);
+
+    grip.add(pickaxe);
+
+    controller.addEventListener('squeezestart', event => {
+      const hand = event.data?.handedness;
+      if (hand === 'left' || hand === 'right') {
+        controllerStates[hand].squeezing = true;
+      }
+    });
+
+    controller.addEventListener('squeezeend', event => {
+      const hand = event.data?.handedness;
+      if (hand === 'left' || hand === 'right') {
+        controllerStates[hand].squeezing = false;
+      }
+    });
+  }
+}
+
+setupVRControllers();
+
+const vrStatus = document.getElementById('vrStatus');
+
+renderer.xr.addEventListener('sessionstart', () => {
+  vrActive = true;
+  vrStatus.textContent = 'VR connected';
+});
+
+renderer.xr.addEventListener('sessionend', () => {
+
+  vrActive = false;
+
+  controllerStates.left.squeezing = false;
+  controllerStates.right.squeezing = false;
+
+  vrStatus.textContent = 'VR disconnected';
+});
+
+/* =================================
+   VR SUPPORT DETECTION
+================================= */
+
+if (navigator.xr) {
+
+  navigator.xr.isSessionSupported('immersive-vr')
+    .then(supported => {
+      vrStatus.textContent = supported
+        ? 'VR support available'
+        : 'PC/mobile mode';
+    })
+    .catch(() => {
+      vrStatus.textContent = 'VR support unavailable';
+    });
+
+} else {
+  vrStatus.textContent = 'WebXR unavailable';
+}
+
+/* =================================
+   VR HAND DETECTION
+================================= */
+
+const controllerHands = {
+  left: null,
+  right: null
+};
+
+function detectVRHands() {
+
+  const session = renderer.xr.getSession();
+
+  controllerHands.left = null;
+  controllerHands.right = null;
+
+  if (!session) return;
+
+  for (const source of session.inputSources) {
+
+    if (source.handedness === 'left') {
+      controllerHands.left = source;
+    }
+
+    if (source.handedness === 'right') {
+      controllerHands.right = source;
+    }
+  }
+}
+
+/* =================================
+   VR JOYSTICKS
+================================= */
+
+let vrMoveX = 0;
+let vrMoveY = 0;
+let vrTurnX = 0;
+
+function deadzone(value) {
+  return Math.abs(value) < 0.15 ? 0 : value;
+}
+
+function readStick(source) {
+
+  if (!source || !source.gamepad) {
+    return [0, 0];
+  }
+
+  const axes = source.gamepad.axes;
+
+  const x = axes.length >= 4 ? axes[2] : axes[0];
+  const y = axes.length >= 4 ? axes[3] : axes[1];
+
+  return [
+    deadzone(x || 0),
+    deadzone(y || 0)
+  ];
+}
+
+function readVRJoysticks() {
+
+  vrMoveX = 0;
+  vrMoveY = 0;
+  vrTurnX = 0;
+
+  if (!vrActive) return;
+
+  detectVRHands();
+
+  const leftStick = readStick(controllerHands.left);
+  const rightStick = readStick(controllerHands.right);
+
+  vrMoveX = leftStick[0];
+  vrMoveY = leftStick[1];
+  vrTurnX = rightStick[0];
+}
+
+/* =================================
+   VR MOVEMENT
+================================= */
+
+function updateVRPlayer(delta) {
+
+  if (!vrActive) return;
+
+  readVRJoysticks();
+
+  const xrCamera = renderer.xr.getCamera(camera);
+
+  const forward = new THREE.Vector3();
+
+  xrCamera.getWorldDirection(forward);
+
+  forward.y = 0;
+  forward.normalize();
+
+  const right = new THREE.Vector3()
+    .crossVectors(
+      forward,
+      new THREE.Vector3(0, 1, 0)
+    )
+    .normalize();
+
+  const movement = new THREE.Vector3();
+
+  movement.addScaledVector(forward, -vrMoveY);
+  movement.addScaledVector(right, vrMoveX);
+
+  if (movement.lengthSq() > 1) {
+    movement.normalize();
+  }
+
+  playerRig.position.addScaledVector(
+    movement,
+    4 * delta
+  );
+
+  playerRig.rotation.y -= vrTurnX * 2.2 * delta;
+}
+
+/* =================================
+   VR GRIP CLIMBING
+================================= */
+
+const previousGripPositions = {
+  left: new THREE.Vector3(),
+  right: new THREE.Vector3()
+};
+
+const currentGripPositions = {
+  left: new THREE.Vector3(),
+  right: new THREE.Vector3()
+};
+
+const gripInitialized = {
+  left: false,
+  right: false
+};
+
+function updateGripClimbing() {
+
+  if (!vrActive) return;
+
+  const session = renderer.xr.getSession();
+  if (!session) return;
+
+  for (const source of session.inputSources) {
+
+    const hand = source.handedness;
+
+    if (hand !== 'left' && hand !== 'right') continue;
+
+    const index = session.inputSources.indexOf(source);
+    const controller = renderer.xr.getController(index);
+
+    if (!controllerStates[hand].squeezing) {
+      gripInitialized[hand] = false;
+      continue;
+    }
+
+    controller.getWorldPosition(currentGripPositions[hand]);
+
+    if (gripInitialized[hand]) {
+
+      const movement = new THREE.Vector3().subVectors(
+        currentGripPositions[hand],
+        previousGripPositions[hand]
+      );
+
+      playerRig.position.sub(movement);
+    }
+
+    previousGripPositions[hand].copy(
+      currentGripPositions[hand]
+    );
+
+    gripInitialized[hand] = true;
+  }
+}
+
+/* =================================
+   PC CONTROLS
+================================= */
+
+window.addEventListener('keydown', event => {
+  keys[event.code] = true;
+});
+
+window.addEventListener('keyup', event => {
+  keys[event.code] = false;
+});
+
+let mouseLocked = false;
+
+renderer.domElement.addEventListener('click', () => {
+  if (!renderer.xr.isPresenting) {
+    renderer.domElement.requestPointerLock();
+  }
+});
+
+document.addEventListener('pointerlockchange', () => {
+  mouseLocked =
+    document.pointerLockElement === renderer.domElement;
+});
+
+document.addEventListener('mousemove', event => {
+
+  if (!mouseLocked || renderer.xr.isPresenting) return;
+
+  playerRig.rotation.y -= event.movementX * 0.002;
+
+  camera.rotation.x -= event.movementY * 0.002;
+
+  camera.rotation.x = THREE.MathUtils.clamp(
+    camera.rotation.x,
+    -1.4,
+    1.4
+  );
+});
+
+function updatePCMovement(delta) {
+
+  if (renderer.xr.isPresenting) return;
+
+  const forward = new THREE.Vector3(0, 0, -1)
+    .applyQuaternion(playerRig.quaternion);
+
+  const right = new THREE.Vector3(1, 0, 0)
+    .applyQuaternion(playerRig.quaternion);
+
+  if (keys['KeyW']) {
+    playerRig.position.addScaledVector(forward, 5 * delta);
+  }
+
+  if (keys['KeyS']) {
+    playerRig.position.addScaledVector(forward, -5 * delta);
+  }
+
+  if (keys['KeyA']) {
+    playerRig.position.addScaledVector(right, -5 * delta);
+  }
+
+  if (keys['KeyD']) {
+    playerRig.position.addScaledVector(right, 5 * delta);
+  }
+
+  if (keys['Space']) {
+    playerRig.position.y += 3 * delta;
+  }
+
+  if (keys['KeyE']) {
+    playerRig.position.y += 1.5 * delta;
+  }
+}
+
+/* =================================
+   MOBILE CONTROLS
+================================= */
+
+const mobileControls = document.getElementById('mobileControls');
+const joystick = document.getElementById('joystick');
+const stick = document.getElementById('stick');
+
+if ('ontouchstart' in window) {
+  mobileControls.style.display = 'block';
+}
+
+let mobileX = 0;
+let mobileY = 0;
+let joystickActive = false;
+
+joystick.addEventListener('pointerdown', event => {
+  joystickActive = true;
+  joystick.setPointerCapture(event.pointerId);
+  moveJoystick(event);
+});
+
+joystick.addEventListener('pointermove', event => {
+  if (joystickActive) moveJoystick(event);
+});
+
+function moveJoystick(event) {
+
+  const rect = joystick.getBoundingClientRect();
+
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+
+  let x = event.clientX - rect.left - centerX;
+  let y = event.clientY - rect.top - centerY;
+
+  const maxDistance = 38;
+  const distance = Math.sqrt(x*x + y*y);
+
+  if (distance > maxDistance) {
+    x = x / distance * maxDistance;
+    y = y / distance * maxDistance;
+  }
+
+  stick.style.left = `${centerX - 24 + x}px`;
+  stick.style.top = `${centerY - 24 + y}px`;
+
+  mobileX = x / maxDistance;
+  mobileY = y / maxDistance;
+}
+
+function resetJoystick() {
+
+  joystickActive = false;
+
+  mobileX = 0;
+  mobileY = 0;
+
+  stick.style.left = '36px';
+  stick.style.top = '36px';
+}
+
+joystick.addEventListener('pointerup', resetJoystick);
+joystick.addEventListener('pointercancel', resetJoystick);
+
+function updateMobileMovement(delta) {
+
+  if (renderer.xr.isPresenting) return;
+
+  const forward = new THREE.Vector3(0, 0, -1)
+    .applyQuaternion(playerRig.quaternion);
+
+  const right = new THREE.Vector3(1, 0, 0)
+    .applyQuaternion(playerRig.quaternion);
+
+  playerRig.position.addScaledVector(
+    forward,
+    -mobileY * 4 * delta
+  );
+
+  playerRig.position.addScaledVector(
+    right,
+    mobileX * 4 * delta
+  );
+}
+
+/* =================================
+   MOBILE BUTTONS
+================================= */
+
+document.getElementById('jumpButton').addEventListener(
+  'click',
+  () => {
+    jumpRequested = true;
+  }
+);
+
+const climbButton = document.getElementById('climbButton');
+
+climbButton.addEventListener('pointerdown', () => {
+  climbRequested = true;
+});
+
+climbButton.addEventListener('pointerup', () => {
+  climbRequested = false;
+});
+
+climbButton.addEventListener('pointercancel', () => {
+  climbRequested = false;
+});
+
+climbButton.addEventListener('pointerleave', () => {
+  climbRequested = false;
+});
+
+/* =================================
+   STAMINA AND ALTITUDE
+================================= */
+
+let stamina = 100;
+
+function updateStamina(delta) {
+
+  const climbing =
+    controllerStates.left.squeezing ||
+    controllerStates.right.squeezing ||
+    climbRequested ||
+    keys['KeyE'];
+
+  if (climbing && stamina > 0) {
+    stamina -= 10 * delta;
+  } else {
+    stamina += 5 * delta;
+  }
+
+  stamina = THREE.MathUtils.clamp(stamina, 0, 100);
+
+  document.getElementById('staminaFill').style.width =
+    stamina + '%';
+
+  document.getElementById('status').textContent =
+    stamina <= 0 ? 'Rest and recover!' : 'Ready to climb!';
+
+  document.getElementById('altitude').textContent =
+    'Altitude: ' + Math.round(
+      getMountainHeight(
+        playerRig.position.x,
+        playerRig.position.z
+      ) + playerRig.position.y
+    ) + ' m';
+}
+
+/* =================================
+   MAIN GAME LOOP
+================================= */
+
+const clock = new THREE.Clock();
+
+function animate() {
+
+  const delta = Math.min(clock.getDelta(), 0.05);
+
+  previousPlayerPosition.copy(playerRig.position);
+
+  if (renderer.xr.isPresenting) {
+    updateVRPlayer(delta);
+    updateGripClimbing();
+  } else {
+    updatePCMovement(delta);
+    updateMobileMovement(delta);
+  }
+
+  if (jumpRequested) {
+    playerRig.position.y += 0.12;
+    jumpRequested = false;
+  }
+
+  updatePlayerCollision(previousPlayerPosition);
+  updateStamina(delta);
+
+  renderer.render(scene, camera);
+}
+
+renderer.setAnimationLoop(animate);
+
+/* =================================
+   RESIZE
+================================= */
+
+window.addEventListener('resize', () => {
+
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+  );
+});
+
+</script>
+</body>
+</html>
+```

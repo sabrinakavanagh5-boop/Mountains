@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,111 +6,137 @@
 <title>MEGA MOUNTAIN CLIMBING</title>
 
 <style>
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     overflow: hidden;
     font-family: Arial, sans-serif;
-    background: #87ceeb;
+    background: #111;
+    color: white;
+}
+
+canvas {
+    display: block;
 }
 
 #hud {
-    position: absolute;
+    position: fixed;
     top: 15px;
     left: 15px;
     z-index: 5;
-    color: white;
-    background: rgba(0,0,0,.7);
-    padding: 12px;
-    border-radius: 10px;
+    background: rgba(0,0,0,.65);
+    padding: 14px 18px;
+    border-radius: 12px;
+    min-width: 190px;
+    pointer-events: none;
+}
+
+#hud h2 {
+    margin: 0 0 8px;
+    font-size: 19px;
+    color: #ffe08a;
+}
+
+#hud p {
+    margin: 5px 0;
+    font-size: 14px;
 }
 
 #staminaBar {
-    width: 150px;
-    height: 12px;
+    height: 10px;
     background: #444;
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
+    margin-top: 5px;
 }
 
 #staminaFill {
     height: 100%;
     width: 100%;
-    background: limegreen;
+    background: #54df69;
+}
+
+#instructions {
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    background: rgba(0,0,0,.65);
+    border-radius: 10px;
+    padding: 10px 15px;
+    text-align: center;
+    font-size: 13px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+#crosshair {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    border: 2px solid white;
+    border-radius: 50%;
+    transform: translate(-50%,-50%);
+    z-index: 4;
+    pointer-events: none;
 }
 
 #mobileControls {
     display: none;
-    position: absolute;
-    bottom: 25px;
-    left: 20px;
+    position: fixed;
+    bottom: 75px;
+    left: 15px;
+    right: 15px;
     z-index: 10;
+    justify-content: space-between;
+    pointer-events: none;
 }
 
-#joystick {
-    width: 125px;
-    height: 125px;
-    border-radius: 50%;
-    background: rgba(255,255,255,.25);
-    border: 2px solid white;
-    position: relative;
+.controlGroup {
+    display: grid;
+    grid-template-columns: repeat(3, 52px);
+    grid-template-rows: repeat(2, 52px);
+    gap: 5px;
+    pointer-events: auto;
+}
+
+.mobileButton {
+    border: 1px solid rgba(255,255,255,.5);
+    background: rgba(0,0,0,.6);
+    color: white;
+    border-radius: 12px;
+    font-size: 20px;
     touch-action: none;
 }
 
-#stick {
-    width: 48px;
-    height: 48px;
-    background: white;
-    border-radius: 50%;
-    position: absolute;
-    left: 36px;
-    top: 36px;
-}
-
-#mobileButtons {
-    position: absolute;
-    right: 20px;
-    bottom: 35px;
+.actionButtons {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    z-index: 10;
+    gap: 8px;
+    pointer-events: auto;
 }
 
-button {
-    padding: 14px;
-    border: none;
-    border-radius: 12px;
-    background: rgba(20,20,20,.8);
-    color: white;
-    font-size: 15px;
+.actionButtons button {
+    width: 75px;
+    height: 55px;
+    font-size: 14px;
 }
 
-#instructions {
-    position: absolute;
-    bottom: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: white;
-    background: rgba(0,0,0,.6);
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    text-align: center;
-}
+@media (pointer: coarse) {
+    #mobileControls {
+        display: flex;
+    }
 
-#errorMessage {
-    display: none;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 30;
-    color: white;
-    background: #8b0000;
-    padding: 20px;
-    max-width: 85%;
-    border-radius: 10px;
-    overflow-wrap: anywhere;
+    #instructions {
+        bottom: 8px;
+        font-size: 11px;
+    }
 }
 </style>
 
@@ -128,77 +153,54 @@ button {
 <body>
 
 <div id="hud">
-    <strong>MEGA MOUNTAIN CLIMBING</strong>
-    <p id="vrStatus">Checking VR support...</p>
-    <p>Stamina</p>
+    <h2>🏔️ MEGA MOUNTAIN</h2>
+    <p>Altitude: <span id="altitude">0</span> m</p>
+    <p>Stamina: <span id="stamina">100</span>%</p>
     <div id="staminaBar">
         <div id="staminaFill"></div>
     </div>
-    <p id="status">Ready to climb!</p>
-    <p id="altitude">Altitude: 0 m</p>
+    <p id="status">Explore the mountain!</p>
+</div>
+
+<div id="crosshair"></div>
+
+<div id="instructions">
+    WASD: Move | Mouse: Look | E: Climb | SPACE: Jump | SHIFT: Sprint
 </div>
 
 <div id="mobileControls">
-    <div id="joystick">
-        <div id="stick"></div>
+    <div class="controlGroup">
+        <button class="mobileButton" data-key="KeyW" style="grid-column:2">▲</button>
+        <button class="mobileButton" data-key="KeyA" style="grid-column:1">◀</button>
+        <button class="mobileButton" data-key="KeyS" style="grid-column:2">▼</button>
+        <button class="mobileButton" data-key="KeyD" style="grid-column:3">▶</button>
+    </div>
+
+    <div class="actionButtons">
+        <button class="mobileButton" data-key="KeyE">CLIMB</button>
+        <button class="mobileButton" data-key="Space">JUMP</button>
+        <button class="mobileButton" data-key="ShiftLeft">RUN</button>
     </div>
 </div>
 
-<div id="mobileButtons">
-    <button id="jumpButton">JUMP</button>
-    <button id="climbButton">CLIMB</button>
-</div>
-
-<div id="instructions">
-    PC: WASD · Mouse to look · E to climb · Space to jump<br>
-    VR: Left stick moves · Right stick turns · Grip to climb
-</div>
-
-<div id="errorMessage"></div>
-
 <script type="module">
+import * as THREE from "three";
+import { XRButton } from "three/addons/webxr/XRButton.js";
 
-import * as THREE from 'three';
-import { VRButton } from 'three/addons/webxr/VRButton.js';
-
-/* =================================
-   ERROR DISPLAY
-================================= */
-
-window.addEventListener('error', event => {
-    const box = document.getElementById('errorMessage');
-    box.style.display = 'block';
-    box.textContent = 'Game error: ' + event.message;
-});
-
-window.addEventListener('unhandledrejection', event => {
-    const box = document.getElementById('errorMessage');
-    box.style.display = 'block';
-    box.textContent = 'Loading error: ' + event.reason;
-});
-
-/* =================================
-   SCENE AND PLAYER
-================================= */
+/* -------------------------------------------------------
+   BASIC SETUP
+------------------------------------------------------- */
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
-scene.fog = new THREE.Fog(0x87ceeb, 50, 220);
+scene.background = new THREE.Color(0x9bc9e8);
+scene.fog = new THREE.Fog(0x9bc9e8, 100, 280);
 
 const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
     0.1,
-    600
+    500
 );
-
-const playerRig = new THREE.Group();
-scene.add(playerRig);
-
-playerRig.position.set(0, 0, 65);
-
-camera.position.set(0, 1.7, 0);
-playerRig.add(camera);
 
 const renderer = new THREE.WebGLRenderer({
     antialias: true
@@ -206,771 +208,744 @@ const renderer = new THREE.WebGLRenderer({
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.xr.enabled = true;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
 
 document.body.appendChild(renderer.domElement);
-document.body.appendChild(VRButton.createButton(renderer));
 
-/* =================================
-   LIGHTING
-================================= */
+const clock = new THREE.Clock();
 
-scene.add(
-    new THREE.HemisphereLight(0xffffff, 0x526044, 2)
-);
+scene.add(new THREE.HemisphereLight(0xc9e6ff, 0x514331, 2));
 
-const sunlight = new THREE.DirectionalLight(0xffffff, 2);
-sunlight.position.set(30, 70, 20);
+const sunlight = new THREE.DirectionalLight(0xffedcf, 3);
+sunlight.position.set(-60, 100, 50);
+sunlight.castShadow = true;
+sunlight.shadow.mapSize.set(2048, 2048);
+sunlight.shadow.camera.left = -120;
+sunlight.shadow.camera.right = 120;
+sunlight.shadow.camera.top = 120;
+sunlight.shadow.camera.bottom = -120;
 scene.add(sunlight);
 
-/* =================================
-   MOUNTAIN HEIGHT FUNCTION
-================================= */
+/* -------------------------------------------------------
+   MOUNTAIN TERRAIN
+------------------------------------------------------- */
 
-function getMountainHeight(x, z) {
+const mountainCenter = new THREE.Vector2(0, 0);
+const mountainRadius = 43;
 
-    const distance = Math.sqrt(
-        x * x + (z + 25) * (z + 25)
+function noise(x, z) {
+    return (
+        Math.sin(x * 0.19 + z * 0.11) * 1.2 +
+        Math.cos(z * 0.25 - x * 0.08) * 0.8 +
+        Math.sin(x * 0.43 + z * 0.37) * 0.35
     );
-
-    // Flat ground outside the mountain.
-    if (distance >= 42) return 0;
-
-    // Flat summit plateau.
-    if (distance <= 9) return 35;
-
-    const t = (42 - distance) / (42 - 9);
-
-    let height = 35 * t * t * (3 - 2 * t);
-
-    // Natural terrain variation.
-    if (distance > 11 && distance < 40) {
-        height += Math.sin(x * 0.25) * 0.7;
-        height += Math.cos(z * 0.2) * 0.7;
-    }
-
-    return height;
 }
 
-/* =================================
-   MOUNTAIN TERRAIN
-================================= */
+function mountainHeight(x, z) {
+    const distance = Math.sqrt(x*x + z*z);
 
-const groundGeometry = new THREE.PlaneGeometry(
-    250, 250, 150, 150
+    if (distance > 100) return 0;
+
+    const base = Math.max(0, 1 - distance / mountainRadius);
+    const peak = Math.pow(base, 1.25) * 47;
+
+    const ridges = noise(x, z) * Math.min(base * 2, 1);
+    const gullies = Math.sin(x * 0.12) *
+                    Math.cos(z * 0.17) *
+                    base * 4;
+
+    return Math.max(0, peak + ridges + gullies);
+}
+
+function terrainMaterialColor(height, x, z) {
+    if (height > 32) {
+        return new THREE.Color(0xe9f3fa);
+    }
+
+    if (height > 23) {
+        return new THREE.Color(0x9ca6ad);
+    }
+
+    if (height > 10) {
+        return new THREE.Color(0x686c6d);
+    }
+
+    if (height > 2) {
+        return new THREE.Color(0x53644d);
+    }
+
+    return new THREE.Color(0x526b43);
+}
+
+const terrainGeometry = new THREE.BufferGeometry();
+const positions = [];
+const colors = [];
+const indices = [];
+
+const terrainSize = 220;
+const divisions = 260;
+
+for (let iz = 0; iz <= divisions; iz++) {
+    for (let ix = 0; ix <= divisions; ix++) {
+        const x = (ix / divisions - 0.5) * terrainSize;
+        const z = (iz / divisions - 0.5) * terrainSize;
+
+        const y = mountainHeight(x, z);
+
+        positions.push(x, y, z);
+
+        const color = terrainMaterialColor(y, x, z);
+        const variation = 0.94 + Math.random() * 0.12;
+
+        colors.push(
+            color.r * variation,
+            color.g * variation,
+            color.b * variation
+        );
+
+        if (ix < divisions && iz < divisions) {
+            const a = iz * (divisions + 1) + ix;
+            const b = a + 1;
+            const c = a + divisions + 1;
+            const d = c + 1;
+
+            indices.push(a, c, b);
+            indices.push(b, c, d);
+        }
+    }
+}
+
+terrainGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
 );
 
-groundGeometry.rotateX(-Math.PI / 2);
-
-const positions = groundGeometry.attributes.position;
-const colors = [];
-
-for (let i = 0; i < positions.count; i++) {
-
-    const x = positions.getX(i);
-    const z = positions.getZ(i);
-
-    const height = getMountainHeight(x, z);
-
-    positions.setY(i, height);
-
-    if (height > 28) {
-        colors.push(0.91, 0.95, 0.98);
-    } else if (height > 12) {
-        colors.push(0.48, 0.49, 0.43);
-    } else {
-        colors.push(0.28, 0.42, 0.24);
-    }
-}
-
-groundGeometry.setAttribute(
-    'color',
+terrainGeometry.setAttribute(
+    "color",
     new THREE.Float32BufferAttribute(colors, 3)
 );
 
-groundGeometry.computeVertexNormals();
+terrainGeometry.setIndex(indices);
+terrainGeometry.computeVertexNormals();
 
 const terrain = new THREE.Mesh(
-    groundGeometry,
+    terrainGeometry,
     new THREE.MeshStandardMaterial({
         vertexColors: true,
-        roughness: 1
+        roughness: 0.95,
+        metalness: 0
     })
 );
 
+terrain.receiveShadow = true;
+terrain.castShadow = true;
 scene.add(terrain);
 
-/* =================================
-   FLAT SUMMIT PLATFORM
-================================= */
+/* -------------------------------------------------------
+   ROCKS AND BOULDERS
+------------------------------------------------------- */
 
-const summitPlatform = new THREE.Mesh(
-    new THREE.CircleGeometry(8.8, 48),
-    new THREE.MeshStandardMaterial({
-        color: 0xeaf2f5,
-        roughness: 1
-    })
+const rockMaterial = new THREE.MeshStandardMaterial({
+    color: 0x686d70,
+    roughness: 1
+});
+
+const rockMaterials = [
+    rockMaterial,
+    new THREE.MeshStandardMaterial({color: 0x85898b, roughness: 1}),
+    new THREE.MeshStandardMaterial({color: 0x484d50, roughness: 1})
+];
+
+for (let i = 0; i < 180; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 8 + Math.random() * 39;
+
+    const x = Math.cos(angle) * distance;
+    const z = Math.sin(angle) * distance;
+    const y = mountainHeight(x, z);
+
+    const size = 0.5 + Math.random() * 2.2;
+
+    const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(size, 1),
+        rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+    );
+
+    rock.position.set(x, y + size * 0.3, z);
+    rock.rotation.set(
+        Math.random() * 2,
+        Math.random() * 2,
+        Math.random() * 2
+    );
+
+    rock.scale.set(
+        0.8 + Math.random() * 0.6,
+        0.6 + Math.random() * 0.5,
+        0.8 + Math.random() * 0.6
+    );
+
+    rock.castShadow = true;
+    rock.receiveShadow = true;
+    scene.add(rock);
+}
+
+/* -------------------------------------------------------
+   SNOWY SUMMIT
+------------------------------------------------------- */
+
+const snowMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf4f8ff,
+    roughness: 0.9
+});
+
+const snowCap = new THREE.Mesh(
+    new THREE.SphereGeometry(9, 32, 18),
+    snowMaterial
 );
 
-summitPlatform.rotation.x = -Math.PI / 2;
-summitPlatform.position.set(0, 35.04, -25);
-scene.add(summitPlatform);
+snowCap.position.set(0, 43, 0);
+snowCap.scale.set(1.1, 0.8, 1.1);
+snowCap.castShadow = true;
+scene.add(snowCap);
 
-/* =================================
-   CONTROLS STATE
-================================= */
+/* -------------------------------------------------------
+   WOODEN EQUIPMENT TABLE
+------------------------------------------------------- */
 
-const keys = {};
+const table = new THREE.Group();
 
-let climbRequested = false;
-let jumpRequested = false;
-let vrActive = false;
+const woodMaterial = new THREE.MeshStandardMaterial({
+    color: 0x80502b,
+    roughness: 0.85
+});
 
-const controllerStates = {
-    left: { squeezing: false },
-    right: { squeezing: false }
-};
+const darkWood = new THREE.MeshStandardMaterial({
+    color: 0x50301c,
+    roughness: 0.9
+});
 
-/* =================================
-   TERRAIN COLLISION
-================================= */
+const metalMaterial = new THREE.MeshStandardMaterial({
+    color: 0x9ca8b1,
+    metalness: 0.85,
+    roughness: 0.25
+});
 
-const previousPlayerPosition = new THREE.Vector3();
-
-const PLAYER_MAX_STEP_SLOPE = 0.85;
-
-function updatePlayerCollision(previousPosition) {
-
-    const x = playerRig.position.x;
-    const z = playerRig.position.z;
-
-    const currentGround = getMountainHeight(x, z);
-
-    const previousGround = getMountainHeight(
-        previousPosition.x,
-        previousPosition.z
+function addBox(parent, width, height, depth, material, x, y, z) {
+    const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        material
     );
 
-    const horizontalDistance = Math.sqrt(
-        Math.pow(x - previousPosition.x, 2) +
-        Math.pow(z - previousPosition.z, 2)
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    parent.add(mesh);
+
+    return mesh;
+}
+
+// Tabletop planks
+for (let i = 0; i < 5; i++) {
+    addBox(
+        table,
+        3.5,
+        0.16,
+        0.42,
+        woodMaterial,
+        0,
+        1.45,
+        -0.84 + i * 0.42
     );
+}
 
-    const heightDifference = currentGround - previousGround;
-
-    const climbing =
-        keys['KeyE'] ||
-        climbRequested ||
-        controllerStates.left.squeezing ||
-        controllerStates.right.squeezing;
-
-    if (
-        !climbing &&
-        heightDifference >
-        horizontalDistance * PLAYER_MAX_STEP_SLOPE + 0.12
-    ) {
-        playerRig.position.x = previousPosition.x;
-        playerRig.position.z = previousPosition.z;
-    }
-
-    const groundHeight = getMountainHeight(
-        playerRig.position.x,
-        playerRig.position.z
-    );
-
-    if (playerRig.position.y < groundHeight) {
-        playerRig.position.y = groundHeight;
-    }
-
-    if (playerRig.position.y < 0) {
-        playerRig.position.y = 0;
+// Legs
+for (const x of [-1.45, 1.45]) {
+    for (const z of [-0.85, 0.85]) {
+        addBox(
+            table,
+            0.22,
+            1.45,
+            0.22,
+            darkWood,
+            x,
+            0.72,
+            z
+        );
     }
 }
 
-/* =================================
+// Table supports
+addBox(table, 3.1, 0.18, 0.18, darkWood, 0, 0.65, -0.85);
+addBox(table, 3.1, 0.18, 0.18, darkWood, 0, 0.65, 0.85);
+
+// Decorative sign
+const sign = addBox(
+    table,
+    1.5,
+    0.65,
+    0.08,
+    darkWood,
+    0,
+    2.05,
+    -1.08
+);
+
+// Position the table outside the mountain, beside the spawn
+table.position.set(4.2, 0, 61.5);
+scene.add(table);
+
+/* -------------------------------------------------------
    PICKAXE MODEL
-================================= */
+------------------------------------------------------- */
 
-function createPickaxe() {
-
+function createPickaxe(scale = 1) {
     const pickaxe = new THREE.Group();
 
     const handle = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-            0.035, 0.045, 0.55, 8
-        ),
+        new THREE.CylinderGeometry(0.055, 0.075, 1.65, 10),
         new THREE.MeshStandardMaterial({
-            color: 0x79502b
+            color: 0x8b542c,
+            roughness: 0.8
         })
     );
 
+    handle.position.y = 0.05;
+    handle.castShadow = true;
     pickaxe.add(handle);
 
     const head = new THREE.Mesh(
-        new THREE.BoxGeometry(0.38, 0.055, 0.07),
-        new THREE.MeshStandardMaterial({
-            color: 0xb9c5cc,
-            metalness: 0.8,
-            roughness: 0.25
-        })
+        new THREE.BoxGeometry(0.95, 0.16, 0.2),
+        metalMaterial
     );
 
-    head.position.y = 0.27;
+    head.position.y = 0.78;
+    head.castShadow = true;
     pickaxe.add(head);
 
+    // Pointed end
     const point = new THREE.Mesh(
-        new THREE.ConeGeometry(0.055, 0.2, 8),
-        new THREE.MeshStandardMaterial({
-            color: 0xb9c5cc,
-            metalness: 0.8
-        })
+        new THREE.ConeGeometry(0.12, 0.55, 8),
+        metalMaterial
     );
 
-    point.rotation.z = Math.PI / 2;
-    point.position.set(-0.24, 0.27, 0);
-
+    point.rotation.z = -Math.PI / 2;
+    point.position.set(-0.68, 0.78, 0);
     pickaxe.add(point);
+
+    // Opposite pointed end
+    const opposite = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.35, 8),
+        metalMaterial
+    );
+
+    opposite.rotation.z = Math.PI / 2;
+    opposite.position.set(0.58, 0.78, 0);
+    pickaxe.add(opposite);
+
+    pickaxe.scale.setScalar(scale);
 
     return pickaxe;
 }
 
-/* =================================
-   VR CONTROLLERS
-================================= */
+// Three pickaxes resting on the table
+const pickaxePositions = [
+    [-0.95, 1.65, -0.35],
+    [0.0, 1.65, 0.15],
+    [0.95, 1.65, -0.35]
+];
 
-const vrControllers = [];
-const vrGrips = [];
+for (const position of pickaxePositions) {
+    const pickaxe = createPickaxe(0.65);
 
-function setupVRControllers() {
+    pickaxe.position.set(...position);
+    pickaxe.rotation.z = Math.PI / 2;
+    pickaxe.rotation.x = 0.12;
 
-    for (let i = 0; i < 2; i++) {
-
-        const controller = renderer.xr.getController(i);
-        const grip = renderer.xr.getControllerGrip(i);
-
-        scene.add(controller);
-        scene.add(grip);
-
-        vrControllers.push(controller);
-        vrGrips.push(grip);
-
-        const pickaxe = createPickaxe();
-
-        pickaxe.position.set(0, -0.08, -0.13);
-        pickaxe.rotation.set(Math.PI / 2, 0, 0);
-
-        grip.add(pickaxe);
-
-        controller.addEventListener('squeezestart', event => {
-            const hand = event.data?.handedness;
-
-            if (hand === 'left' || hand === 'right') {
-                controllerStates[hand].squeezing = true;
-            }
-        });
-
-        controller.addEventListener('squeezeend', event => {
-            const hand = event.data?.handedness;
-
-            if (hand === 'left' || hand === 'right') {
-                controllerStates[hand].squeezing = false;
-            }
-        });
-    }
+    table.add(pickaxe);
 }
 
-setupVRControllers();
+/* -------------------------------------------------------
+   EQUIPMENT TABLE SIGN
+------------------------------------------------------- */
 
-const vrStatus = document.getElementById('vrStatus');
+const signCanvas = document.createElement("canvas");
+signCanvas.width = 512;
+signCanvas.height = 128;
 
-renderer.xr.addEventListener('sessionstart', () => {
-    vrActive = true;
-    vrStatus.textContent = 'VR connected';
-});
+const signContext = signCanvas.getContext("2d");
+signContext.fillStyle = "#382316";
+signContext.fillRect(0, 0, 512, 128);
 
-renderer.xr.addEventListener('sessionend', () => {
+signContext.fillStyle = "#ffe0a0";
+signContext.font = "bold 46px Arial";
+signContext.textAlign = "center";
+signContext.fillText("CLIMBING GEAR", 256, 78);
 
-    vrActive = false;
+const signTexture = new THREE.CanvasTexture(signCanvas);
 
-    controllerStates.left.squeezing = false;
-    controllerStates.right.squeezing = false;
+const signText = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.4, 0.35),
+    new THREE.MeshBasicMaterial({
+        map: signTexture,
+        transparent: false
+    })
+);
 
-    vrStatus.textContent = 'VR disconnected';
-});
+signText.position.set(4.2, 2.05, 60.4);
+scene.add(signText);
 
-/* =================================
-   VR SUPPORT DETECTION
-================================= */
+/* -------------------------------------------------------
+   PLAYER
+------------------------------------------------------- */
 
-if (navigator.xr) {
+const playerRig = new THREE.Group();
+scene.add(playerRig);
 
-    navigator.xr.isSessionSupported('immersive-vr')
-        .then(supported => {
-            vrStatus.textContent = supported
-                ? 'VR support available'
-                : 'PC/mobile mode';
-        })
-        .catch(() => {
-            vrStatus.textContent = 'VR support unavailable';
-        });
+playerRig.position.set(0, 1.7, 65);
 
-} else {
-    vrStatus.textContent = 'WebXR unavailable';
+camera.position.set(0, 0, 0);
+playerRig.add(camera);
+
+let yaw = 0;
+let pitch = 0;
+
+let stamina = 100;
+let verticalVelocity = 0;
+let isGrounded = true;
+
+const keys = {};
+
+const playerHeight = 1.7;
+
+function getGroundHeight(x, z) {
+    return mountainHeight(x, z);
 }
 
-/* =================================
-   VR HAND DETECTION
-================================= */
+/* -------------------------------------------------------
+   KEYBOARD CONTROLS
+------------------------------------------------------- */
 
-const controllerHands = {
-    left: null,
-    right: null
-};
-
-function detectVRHands() {
-
-    const session = renderer.xr.getSession();
-
-    controllerHands.left = null;
-    controllerHands.right = null;
-
-    if (!session) return;
-
-    for (const source of session.inputSources) {
-
-        if (source.handedness === 'left') {
-            controllerHands.left = source;
-        }
-
-        if (source.handedness === 'right') {
-            controllerHands.right = source;
-        }
-    }
-}
-
-/* =================================
-   VR JOYSTICKS
-================================= */
-
-let vrMoveX = 0;
-let vrMoveY = 0;
-let vrTurnX = 0;
-
-function deadzone(value) {
-    return Math.abs(value) < 0.15 ? 0 : value;
-}
-
-function readStick(source) {
-
-    if (!source || !source.gamepad) {
-        return [0, 0];
-    }
-
-    const axes = source.gamepad.axes;
-
-    const x = axes.length >= 4 ? axes[2] : axes[0];
-    const y = axes.length >= 4 ? axes[3] : axes[1];
-
-    return [
-        deadzone(x || 0),
-        deadzone(y || 0)
-    ];
-}
-
-function readVRJoysticks() {
-
-    vrMoveX = 0;
-    vrMoveY = 0;
-    vrTurnX = 0;
-
-    if (!vrActive) return;
-
-    detectVRHands();
-
-    const leftStick = readStick(controllerHands.left);
-    const rightStick = readStick(controllerHands.right);
-
-    vrMoveX = leftStick[0];
-    vrMoveY = leftStick[1];
-    vrTurnX = rightStick[0];
-}
-
-/* =================================
-   VR MOVEMENT
-================================= */
-
-function updateVRPlayer(delta) {
-
-    if (!vrActive) return;
-
-    readVRJoysticks();
-
-    const xrCamera = renderer.xr.getCamera(camera);
-
-    const forward = new THREE.Vector3();
-
-    xrCamera.getWorldDirection(forward);
-
-    forward.y = 0;
-    forward.normalize();
-
-    const right = new THREE.Vector3()
-        .crossVectors(
-            forward,
-            new THREE.Vector3(0, 1, 0)
-        )
-        .normalize();
-
-    const movement = new THREE.Vector3();
-
-    movement.addScaledVector(forward, -vrMoveY);
-    movement.addScaledVector(right, vrMoveX);
-
-    if (movement.lengthSq() > 1) {
-        movement.normalize();
-    }
-
-    playerRig.position.addScaledVector(
-        movement,
-        4 * delta
-    );
-
-    playerRig.rotation.y -= vrTurnX * 2.2 * delta;
-}
-
-/* =================================
-   VR GRIP CLIMBING
-================================= */
-
-const previousGripPositions = {
-    left: new THREE.Vector3(),
-    right: new THREE.Vector3()
-};
-
-const currentGripPositions = {
-    left: new THREE.Vector3(),
-    right: new THREE.Vector3()
-};
-
-const gripInitialized = {
-    left: false,
-    right: false
-};
-
-function updateGripClimbing() {
-
-    if (!vrActive) return;
-
-    const session = renderer.xr.getSession();
-    if (!session) return;
-
-    for (const source of session.inputSources) {
-
-        const hand = source.handedness;
-
-        if (hand !== 'left' && hand !== 'right') continue;
-
-        const index = Array.from(session.inputSources).indexOf(source);
-
-        if (index === -1) continue;
-
-        const controller = vrControllers[index];
-
-        if (!controller) continue;
-
-        if (!controllerStates[hand].squeezing) {
-            gripInitialized[hand] = false;
-            continue;
-        }
-
-        controller.getWorldPosition(
-            currentGripPositions[hand]
-        );
-
-        if (gripInitialized[hand]) {
-
-            const movement = new THREE.Vector3().subVectors(
-                currentGripPositions[hand],
-                previousGripPositions[hand]
-            );
-
-            playerRig.position.sub(movement);
-        }
-
-        previousGripPositions[hand].copy(
-            currentGripPositions[hand]
-        );
-
-        gripInitialized[hand] = true;
-    }
-}
-
-/* =================================
-   PC CONTROLS
-================================= */
-
-window.addEventListener('keydown', event => {
+window.addEventListener("keydown", event => {
     keys[event.code] = true;
+
+    if (event.code === "Space") {
+        event.preventDefault();
+
+        if (isGrounded) {
+            verticalVelocity = 7;
+            isGrounded = false;
+        }
+    }
 });
 
-window.addEventListener('keyup', event => {
+window.addEventListener("keyup", event => {
     keys[event.code] = false;
 });
 
-let mouseLocked = false;
+/* -------------------------------------------------------
+   MOUSE LOOK
+------------------------------------------------------- */
 
-renderer.domElement.addEventListener('click', () => {
+renderer.domElement.addEventListener("click", () => {
     if (!renderer.xr.isPresenting) {
-        renderer.domElement.requestPointerLock();
+        renderer.domElement.requestPointerLock?.();
     }
 });
 
-document.addEventListener('pointerlockchange', () => {
-    mouseLocked =
-        document.pointerLockElement === renderer.domElement;
+document.addEventListener("mousemove", event => {
+    if (document.pointerLockElement === renderer.domElement) {
+        yaw -= event.movementX * 0.002;
+        pitch -= event.movementY * 0.002;
+
+        pitch = THREE.MathUtils.clamp(
+            pitch,
+            -1.45,
+            1.45
+        );
+
+        playerRig.rotation.y = yaw;
+        camera.rotation.x = pitch;
+    }
 });
 
-document.addEventListener('mousemove', event => {
-
-    if (!mouseLocked || renderer.xr.isPresenting) return;
-
-    playerRig.rotation.y -= event.movementX * 0.002;
-
-    camera.rotation.x -= event.movementY * 0.002;
-
-    camera.rotation.x = THREE.MathUtils.clamp(
-        camera.rotation.x,
-        -1.4,
-        1.4
-    );
-});
-
-function updatePCMovement(delta) {
-
-    if (renderer.xr.isPresenting) return;
-
-    const forward = new THREE.Vector3(0, 0, -1)
-        .applyQuaternion(playerRig.quaternion);
-
-    const right = new THREE.Vector3(1, 0, 0)
-        .applyQuaternion(playerRig.quaternion);
-
-    if (keys['KeyW']) {
-        playerRig.position.addScaledVector(forward, 5 * delta);
-    }
-
-    if (keys['KeyS']) {
-        playerRig.position.addScaledVector(forward, -5 * delta);
-    }
-
-    if (keys['KeyA']) {
-        playerRig.position.addScaledVector(right, -5 * delta);
-    }
-
-    if (keys['KeyD']) {
-        playerRig.position.addScaledVector(right, 5 * delta);
-    }
-
-    if (keys['Space']) {
-        playerRig.position.y += 3 * delta;
-    }
-
-    if (keys['KeyE']) {
-        playerRig.position.y += 1.5 * delta;
-    }
-}
-
-/* =================================
+/* -------------------------------------------------------
    MOBILE CONTROLS
-================================= */
+------------------------------------------------------- */
 
-const mobileControls = document.getElementById('mobileControls');
-const joystick = document.getElementById('joystick');
-const stick = document.getElementById('stick');
+document.querySelectorAll(".mobileButton").forEach(button => {
+    const key = button.dataset.key;
 
-if ('ontouchstart' in window) {
-    mobileControls.style.display = 'block';
-}
+    button.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        keys[key] = true;
+        button.setPointerCapture(event.pointerId);
+    });
 
-let mobileX = 0;
-let mobileY = 0;
-let joystickActive = false;
+    button.addEventListener("pointerup", event => {
+        event.preventDefault();
+        keys[key] = false;
+    });
 
-joystick.addEventListener('pointerdown', event => {
-    joystickActive = true;
-    joystick.setPointerCapture(event.pointerId);
-    moveJoystick(event);
+    button.addEventListener("pointercancel", () => {
+        keys[key] = false;
+    });
+
+    button.addEventListener("lostpointercapture", () => {
+        keys[key] = false;
+    });
 });
 
-joystick.addEventListener('pointermove', event => {
-    if (joystickActive) moveJoystick(event);
-});
+/* -------------------------------------------------------
+   MOBILE CAMERA LOOK
+------------------------------------------------------- */
 
-function moveJoystick(event) {
+let lastTouchX = 0;
+let lastTouchY = 0;
 
-    const rect = joystick.getBoundingClientRect();
-
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    let x = event.clientX - rect.left - centerX;
-    let y = event.clientY - rect.top - centerY;
-
-    const maxDistance = 38;
-    const distance = Math.sqrt(x*x + y*y);
-
-    if (distance > maxDistance) {
-        x = x / distance * maxDistance;
-        y = y / distance * maxDistance;
+renderer.domElement.addEventListener("touchstart", event => {
+    if (event.touches.length === 1) {
+        lastTouchX = event.touches[0].clientX;
+        lastTouchY = event.touches[0].clientY;
     }
+}, {passive: true});
 
-    stick.style.left = `${centerX - 24 + x}px`;
-    stick.style.top = `${centerY - 24 + y}px`;
+renderer.domElement.addEventListener("touchmove", event => {
+    if (event.touches.length === 1) {
+        const touch = event.touches[0];
 
-    mobileX = x / maxDistance;
-    mobileY = y / maxDistance;
-}
+        const dx = touch.clientX - lastTouchX;
+        const dy = touch.clientY - lastTouchY;
 
-function resetJoystick() {
+        if (touch.clientX > window.innerWidth * 0.35) {
+            yaw -= dx * 0.004;
+            pitch -= dy * 0.004;
 
-    joystickActive = false;
+            pitch = THREE.MathUtils.clamp(
+                pitch,
+                -1.45,
+                1.45
+            );
 
-    mobileX = 0;
-    mobileY = 0;
+            playerRig.rotation.y = yaw;
+            camera.rotation.x = pitch;
+        }
 
-    stick.style.left = '36px';
-    stick.style.top = '36px';
-}
-
-joystick.addEventListener('pointerup', resetJoystick);
-joystick.addEventListener('pointercancel', resetJoystick);
-
-function updateMobileMovement(delta) {
-
-    if (renderer.xr.isPresenting) return;
-
-    const forward = new THREE.Vector3(0, 0, -1)
-        .applyQuaternion(playerRig.quaternion);
-
-    const right = new THREE.Vector3(1, 0, 0)
-        .applyQuaternion(playerRig.quaternion);
-
-    playerRig.position.addScaledVector(
-        forward,
-        -mobileY * 4 * delta
-    );
-
-    playerRig.position.addScaledVector(
-        right,
-        mobileX * 4 * delta
-    );
-}
-
-/* =================================
-   MOBILE BUTTONS
-================================= */
-
-document.getElementById('jumpButton').addEventListener(
-    'click',
-    () => {
-        jumpRequested = true;
+        lastTouchX = touch.clientX;
+        lastTouchY = touch.clientY;
     }
+}, {passive: true});
+
+/* -------------------------------------------------------
+   VR SUPPORT
+------------------------------------------------------- */
+
+renderer.xr.enabled = true;
+
+document.body.appendChild(
+    XRButton.createButton(renderer)
 );
 
-const climbButton = document.getElementById('climbButton');
+const controller1 = renderer.xr.getController(0);
+const controller2 = renderer.xr.getController(1);
 
-climbButton.addEventListener('pointerdown', () => {
-    climbRequested = true;
+playerRig.add(controller1);
+playerRig.add(controller2);
+
+function addControllerPickaxe(controller) {
+    const pickaxe = createPickaxe(0.45);
+    pickaxe.position.set(0, -0.25, -0.35);
+    pickaxe.rotation.x = -0.3;
+    controller.add(pickaxe);
+}
+
+addControllerPickaxe(controller1);
+addControllerPickaxe(controller2);
+
+const controllerGrip1 = renderer.xr.getControllerGrip(0);
+const controllerGrip2 = renderer.xr.getControllerGrip(1);
+
+playerRig.add(controllerGrip1);
+playerRig.add(controllerGrip2);
+
+let vrClimbing = false;
+
+controller1.addEventListener("selectstart", () => {
+    vrClimbing = true;
 });
 
-climbButton.addEventListener('pointerup', () => {
-    climbRequested = false;
+controller1.addEventListener("selectend", () => {
+    vrClimbing = false;
 });
 
-climbButton.addEventListener('pointercancel', () => {
-    climbRequested = false;
+controller2.addEventListener("selectstart", () => {
+    vrClimbing = true;
 });
 
-climbButton.addEventListener('pointerleave', () => {
-    climbRequested = false;
+controller2.addEventListener("selectend", () => {
+    vrClimbing = false;
 });
 
-/* =================================
-   STAMINA AND ALTITUDE
-================================= */
+/* -------------------------------------------------------
+   MOVEMENT AND CLIMBING
+------------------------------------------------------- */
 
-let stamina = 100;
+const forward = new THREE.Vector3();
+const right = new THREE.Vector3();
+const movement = new THREE.Vector3();
 
-function updateStamina(delta) {
+function updatePlayer(delta) {
+    const climbing = keys["KeyE"] || vrClimbing;
+    const sprinting = keys["ShiftLeft"] || keys["ShiftRight"];
 
-    const climbing =
-        controllerStates.left.squeezing ||
-        controllerStates.right.squeezing ||
-        climbRequested ||
-        keys['KeyE'];
+    const moveSpeed = sprinting ? 9 : 5;
 
-    if (climbing && stamina > 0) {
-        stamina -= 10 * delta;
+    forward.set(
+        -Math.sin(yaw),
+        0,
+        -Math.cos(yaw)
+    );
+
+    right.set(
+        Math.cos(yaw),
+        0,
+        -Math.sin(yaw)
+    );
+
+    movement.set(0, 0, 0);
+
+    if (keys["KeyW"]) movement.add(forward);
+    if (keys["KeyS"]) movement.sub(forward);
+    if (keys["KeyD"]) movement.add(right);
+    if (keys["KeyA"]) movement.sub(right);
+
+    if (movement.lengthSq() > 0) {
+        movement.normalize();
+
+        const speed = sprinting && stamina > 0
+            ? moveSpeed
+            : 5;
+
+        playerRig.position.addScaledVector(
+            movement,
+            speed * delta
+        );
+    }
+
+    const x = playerRig.position.x;
+    const z = playerRig.position.z;
+
+    const ground = getGroundHeight(x, z);
+    const distanceFromCenter = Math.sqrt(x*x + z*z);
+
+    if (climbing && distanceFromCenter < 48 && stamina > 0) {
+        playerRig.position.y += 4.2 * delta;
+        stamina -= 17 * delta;
+
+        document.getElementById("status").textContent =
+            "Climbing!";
     } else {
-        stamina += 5 * delta;
+        verticalVelocity -= 18 * delta;
+        playerRig.position.y += verticalVelocity * delta;
+
+        document.getElementById("status").textContent =
+            "Explore the mountain!";
+    }
+
+    const minimumY = ground + playerHeight;
+
+    if (playerRig.position.y < minimumY) {
+        playerRig.position.y = minimumY;
+        verticalVelocity = 0;
+        isGrounded = true;
+    }
+
+    if (playerRig.position.y > minimumY + 0.2) {
+        isGrounded = false;
+    }
+
+    if (sprinting && movement.lengthSq() > 0 && stamina > 0) {
+        stamina -= 9 * delta;
+    } else if (!climbing) {
+        stamina += 8 * delta;
     }
 
     stamina = THREE.MathUtils.clamp(stamina, 0, 100);
 
-    document.getElementById('staminaFill').style.width =
-        stamina + '%';
+    // Keep player inside the playable area
+    const maxDistance = 100;
+    const distance = Math.sqrt(x*x + z*z);
 
-    document.getElementById('status').textContent =
-        stamina <= 0 ? 'Rest and recover!' : 'Ready to climb!';
+    if (distance > maxDistance) {
+        playerRig.position.x *= maxDistance / distance;
+        playerRig.position.z *= maxDistance / distance;
+    }
 
-    document.getElementById('altitude').textContent =
-        'Altitude: ' + Math.round(
-            getMountainHeight(
-                playerRig.position.x,
-                playerRig.position.z
-            ) + playerRig.position.y
-        ) + ' m';
+    document.getElementById("altitude").textContent =
+        Math.max(0, Math.round(playerRig.position.y - playerHeight));
+
+    document.getElementById("stamina").textContent =
+        Math.round(stamina);
+
+    document.getElementById("staminaFill").style.width =
+        stamina + "%";
 }
 
-/* =================================
-   MAIN GAME LOOP
-================================= */
+/* -------------------------------------------------------
+   SKY AND DISTANT MOUNTAINS
+------------------------------------------------------- */
 
-const clock = new THREE.Clock();
+const distantMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8299a4,
+    roughness: 1
+});
+
+for (let i = 0; i < 9; i++) {
+    const angle = (i / 9) * Math.PI * 2;
+    const distance = 105 + Math.random() * 20;
+
+    const mountain = new THREE.Mesh(
+        new THREE.ConeGeometry(
+            18 + Math.random() * 12,
+            35 + Math.random() * 25,
+            7
+        ),
+        distantMaterial
+    );
+
+    mountain.position.set(
+        Math.cos(angle) * distance,
+        12,
+        Math.sin(angle) * distance
+    );
+
+    mountain.castShadow = true;
+    scene.add(mountain);
+}
+
+/* -------------------------------------------------------
+   ANIMATION LOOP
+------------------------------------------------------- */
 
 function animate() {
-
     const delta = Math.min(clock.getDelta(), 0.05);
 
-    previousPlayerPosition.copy(playerRig.position);
-
-    if (renderer.xr.isPresenting) {
-        updateVRPlayer(delta);
-        updateGripClimbing();
-    } else {
-        updatePCMovement(delta);
-        updateMobileMovement(delta);
+    if (!renderer.xr.isPresenting) {
+        updatePlayer(delta);
     }
-
-    if (jumpRequested) {
-        playerRig.position.y += 0.12;
-        jumpRequested = false;
-    }
-
-    updatePlayerCollision(previousPlayerPosition);
-    updateStamina(delta);
 
     renderer.render(scene, camera);
 }
 
 renderer.setAnimationLoop(animate);
 
-/* =================================
+/* -------------------------------------------------------
    RESIZE
-================================= */
+------------------------------------------------------- */
 
-window.addEventListener('resize', () => {
-
+window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
 
@@ -983,5 +958,3 @@ window.addEventListener('resize', () => {
 </script>
 </body>
 </html>
-
-  
